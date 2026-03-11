@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Plan {
+  id         String    @id @default(cuid())
+  name       String
+  price      Float
+  hours      Int
+  maxDevices Int       @default(1)
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  payments   Payment[]
+  vouchers   Voucher[]
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  planId          String
+  plan            Plan          @relation(fields: [planId], references: [id])
+  macAddress      String
+  deviceIp        String?
+  email           String
+  status          PaymentStatus @default(PENDING)
+  mpPaymentId     String?       @unique
+  pixQrCode       String?
+  pixQrCodeBase64 String?
+  startedAt       DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([macAddress])
+  @@index([mpPaymentId])
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Voucher {
+  id        String    @id @default(cuid())
+  planId    String
+  plan      Plan      @relation(fields: [planId], references: [id])
+  code      String    @unique
+  usedBy    String?
+  createdBy String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
