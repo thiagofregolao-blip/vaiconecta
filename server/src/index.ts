@@ -52,14 +52,16 @@ app.get('*', (_req, res) => {
 });
 
 async function ensureDefaultAdmin() {
-  const count = await prisma.admin.count();
-  if (count === 0) {
-    const password = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
-    await prisma.admin.create({
-      data: { username: 'admin', name: 'Administrador', role: 'SUPER_ADMIN', password },
-    });
-    console.log('Super admin criado: admin / ' + (process.env.ADMIN_PASSWORD || 'admin123'));
-  }
+  const username = process.env.ADMIN_USERNAME || 'admin';
+  const rawPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const password = await bcrypt.hash(rawPassword, 10);
+
+  await prisma.admin.upsert({
+    where: { username },
+    update: { password, role: 'SUPER_ADMIN' },
+    create: { username, name: username, role: 'SUPER_ADMIN', password },
+  });
+  console.log(`Super admin pronto: ${username}`);
 }
 
 app.listen(PORT, async () => {
