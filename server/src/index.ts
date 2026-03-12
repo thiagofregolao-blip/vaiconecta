@@ -29,7 +29,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 
@@ -55,10 +55,6 @@ app.get('/api/banners', async (_req, res) => {
   });
   res.json(banners);
 });
-
-// Serve arquivos de upload
-const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsPath));
 
 const clientDist = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDist));

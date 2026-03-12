@@ -13,15 +13,24 @@ interface Banner {
   createdAt: string;
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AdminBanners() {
   const qc = useQueryClient();
-  const [modal, setModal] = useState<'create' | Banner | null>(null);
-  const [title, setTitle] = useState('');
-  const [link, setLink] = useState('');
-  const [order, setOrder] = useState('0');
-  const [file, setFile] = useState<File | null>(null);
+  const [modal,   setModal]   = useState<'create' | Banner | null>(null);
+  const [title,   setTitle]   = useState('');
+  const [link,    setLink]    = useState('');
+  const [order,   setOrder]   = useState('0');
+  const [b64,     setB64]     = useState<string>('');   // base64 da nova imagem
   const [preview, setPreview] = useState<string>('');
-  const [error, setError] = useState('');
+  const [error,   setError]   = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: banners = [], isLoading } = useQuery<Banner[]>({
@@ -31,40 +40,34 @@ export default function AdminBanners() {
 
   function openCreate() {
     setModal('create'); setTitle(''); setLink(''); setOrder('0');
-    setFile(null); setPreview(''); setError('');
+    setB64(''); setPreview(''); setError('');
   }
 
   function openEdit(b: Banner) {
     setModal(b); setTitle(b.title); setLink(b.link || '');
-    setOrder(String(b.order)); setFile(null); setPreview(''); setError('');
+    setOrder(String(b.order)); setB64(''); setPreview(''); setError('');
   }
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+    const base64 = await fileToBase64(f);
+    setB64(base64);
+    setPreview(base64);
   }
 
   const saveMutation = useMutation({
-    mutationFn: () => {
-      const fd = new FormData();
-      fd.append('title', title);
-      fd.append('link', link);
-      fd.append('order', order);
-      if (file) fd.append('image', file);
+    mutationFn: async () => {
+      const isCreate = modal === 'create';
+      const payload: Record<string, unknown> = { title, link: link || null, order: Number(order) };
+      if (b64) payload.imageUrl = b64;                   // nova imagem
+      else if (isCreate) throw new Error('Imagem obrigatória');
 
-      if (modal === 'create') {
-        return adminApi.post('/banners', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      }
-      return adminApi.put(`/banners/${(modal as Banner).id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (isCreate) return adminApi.post('/banners', payload);
+      return adminApi.put(`/banners/${(modal as Banner).id}`, payload);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-banners'] });
-      setModal(null);
-      setError('');
-    },
-    onError: (err: any) => setError(err.response?.data?.error || 'Erro ao salvar'),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-banners'] }); setModal(null); setError(''); },
+    onError: (err: any) => setError(err.response?.data?.error || err.message || 'Erro ao salvar'),
   });
 
   const deleteMutation = useMutation({
@@ -73,15 +76,12 @@ export default function AdminBanners() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, active }: { id: string; active: boolean }) => {
-      const fd = new FormData();
-      fd.append('active', String(active));
-      return adminApi.put(`/banners/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-    },
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      adminApi.put(`/banners/${id}`, { active }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-banners'] }),
   });
 
-  const canSave = title.trim() !== '' && (modal !== 'create' || file !== null);
+  const canSave = title.trim() !== '' && (modal !== 'create' || b64 !== '');
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -111,33 +111,23 @@ export default function AdminBanners() {
         <div className="space-y-3">
           {banners.map((b) => (
             <div key={b.id} className="glass rounded-2xl p-4 flex items-center gap-4">
-              {/* Thumbnail */}
               <div className="w-24 h-16 rounded-xl overflow-hidden shrink-0 bg-white/5 border border-white/10">
                 <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
               </div>
-
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold">{b.title}</p>
                 {b.link && <p className="text-slate-500 text-xs truncate mt-0.5">{b.link}</p>}
                 <p className="text-slate-600 text-xs mt-0.5">Ordem: {b.order}</p>
               </div>
-
-              {/* Ativo toggle */}
-              <button
-                onClick={() => toggleMutation.mutate({ id: b.id, active: !b.active })}
-                className="cursor-pointer text-sm flex items-center gap-1.5 transition-colors"
-                title={b.active ? 'Desativar' : 'Ativar'}
-              >
+              <button onClick={() => toggleMutation.mutate({ id: b.id, active: !b.active })}
+                className="cursor-pointer flex items-center gap-1.5 transition-colors">
                 {b.active
                   ? <ToggleRight className="w-7 h-7 text-green-400" />
-                  : <ToggleLeft className="w-7 h-7 text-slate-600" />}
-                <span className={b.active ? 'text-green-400 text-xs' : 'text-slate-600 text-xs'}>
+                  : <ToggleLeft  className="w-7 h-7 text-slate-600" />}
+                <span className={`text-xs ${b.active ? 'text-green-400' : 'text-slate-600'}`}>
                   {b.active ? 'Ativo' : 'Inativo'}
                 </span>
               </button>
-
-              {/* Actions */}
               <div className="flex gap-2 shrink-0">
                 <button onClick={() => openEdit(b)}
                   className="w-8 h-8 rounded-lg glass flex items-center justify-center text-slate-400 hover:text-blue-400 cursor-pointer">
@@ -153,7 +143,6 @@ export default function AdminBanners() {
         </div>
       )}
 
-      {/* Modal */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="glass rounded-3xl w-full max-w-sm p-6 animate-slide-up">
@@ -168,21 +157,15 @@ export default function AdminBanners() {
             </div>
 
             <div className="space-y-4">
-              {/* Upload de imagem */}
+              {/* Upload */}
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">
                   Imagem {modal === 'create' ? '*' : '(deixe vazio para manter)'}
                 </label>
-                <div
-                  onClick={() => fileRef.current?.click()}
-                  className="w-full h-36 rounded-xl border-2 border-dashed border-white/20 hover:border-blue-500/50 flex items-center justify-center cursor-pointer transition-colors overflow-hidden bg-white/5"
-                >
+                <div onClick={() => fileRef.current?.click()}
+                  className="w-full h-36 rounded-xl border-2 border-dashed border-white/20 hover:border-blue-500/50 flex items-center justify-center cursor-pointer transition-colors overflow-hidden bg-white/5">
                   {preview || (modal !== 'create' && (modal as Banner).imageUrl) ? (
-                    <img
-                      src={preview || (modal as Banner).imageUrl}
-                      alt="preview"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={preview || (modal as Banner).imageUrl} alt="preview" className="w-full h-full object-cover" />
                   ) : (
                     <div className="text-center">
                       <ImageIcon className="w-8 h-8 text-slate-600 mx-auto mb-2" />
@@ -196,15 +179,13 @@ export default function AdminBanners() {
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">Título *</label>
-                <input value={title} onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Promoção de Verão"
+                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Promoção de Verão"
                   className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
               </div>
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1.5">Link (opcional)</label>
-                <input value={link} onChange={(e) => setLink(e.target.value)}
-                  placeholder="https://..."
+                <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://..."
                   className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
               </div>
 
@@ -216,11 +197,8 @@ export default function AdminBanners() {
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
-              <button
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending || !canSave}
-                className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
-              >
+              <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !canSave}
+                className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer">
                 {saveMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Salvar'}
               </button>
             </div>

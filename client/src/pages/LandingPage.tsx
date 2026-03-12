@@ -158,7 +158,7 @@ export default function LandingPage() {
           ) : plans.length === 0 ? (
             <div className="text-slate-500 text-sm text-center py-4">Nenhum plano disponível</div>
           ) : (
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-3 pb-1 -mx-1 px-1 snap-x snap-mandatory">
               {plans.map((plan, idx) => (
                 <PlanCard
                   key={plan.id}
@@ -205,8 +205,8 @@ export default function LandingPage() {
                 <p className="text-white font-black text-4xl sm:text-5xl">{b.title}</p>
               </div>
             )}
-            {/* Overlay escuro 15% com leve blur */}
-            <div className="absolute inset-0 bg-black/15 backdrop-blur-[1px]" />
+            {/* Overlay escuro 10% */}
+            <div className="absolute inset-0 bg-black/10" />
           </div>
         ))}
 
