@@ -62,14 +62,18 @@ export default function LandingPage() {
 
       {/* ── 2. HEADER ── */}
       <header className="shrink-0 bg-[#0d1b2e] border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between gap-6">
-          <img
-            src="/logo01.png"
-            alt="VaiConecta"
-            className="h-10 w-auto object-contain"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-          <nav className="flex items-center gap-6">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center relative">
+          {/* Logo centralizado */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <img
+              src="/logo02.png"
+              alt="VaiConecta"
+              className="h-16 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+          {/* Nav à direita */}
+          <nav className="ml-auto flex items-center gap-6 relative z-10">
             {([
               { key: 'como-funciona', label: 'Como funciona' },
               { key: 'sobre',         label: 'Sobre' },
