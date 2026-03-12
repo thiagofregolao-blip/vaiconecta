@@ -7,6 +7,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  STORE_ADMIN
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  name      String?
+  email     String?   @unique
+  password  String
+  role      AdminRole @default(STORE_ADMIN)
+  storeId   String?
+  store     Store?    @relation(fields: [storeId], references: [id])
+  createdAt DateTime  @default(now())
+}
+
+model Store {
+  id            String        @id @default(cuid())
+  name          String
+  commissionPct Float         @default(10)
+  admins        Admin[]
+  accessPoints  AccessPoint[]
+  createdAt     DateTime      @default(now())
+}
+
+model AccessPoint {
+  id        String   @id @default(cuid())
+  name      String
+  apMac     String?  @unique
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id])
+  createdAt DateTime @default(now())
+}
+
 model Plan {
   id         String    @id @default(cuid())
   name       String
@@ -17,8 +60,8 @@ model Plan {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  payments   Payment[]
-  vouchers   Voucher[]
+  payments Payment[]
+  vouchers Voucher[]
 }
 
 model Payment {
@@ -27,6 +70,7 @@ model Payment {
   plan            Plan          @relation(fields: [planId], references: [id])
   macAddress      String
   deviceIp        String?
+  apMac           String?
   email           String
   status          PaymentStatus @default(PENDING)
   mpPaymentId     String?       @unique
@@ -38,14 +82,7 @@ model Payment {
 
   @@index([macAddress])
   @@index([mpPaymentId])
-}
-
-enum PaymentStatus {
-  PENDING
-  APPROVED
-  ACTIVE
-  EXPIRED
-  CANCELLED
+  @@index([apMac])
 }
 
 model Voucher {
@@ -57,11 +94,4 @@ model Voucher {
   createdBy String
   usedAt    DateTime?
   createdAt DateTime  @default(now())
-}
-
-model Admin {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  createdAt DateTime @default(now())
 }
