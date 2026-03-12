@@ -158,7 +158,7 @@ export default function LandingPage() {
           ) : plans.length === 0 ? (
             <div className="text-slate-500 text-sm text-center py-4">Nenhum plano disponível</div>
           ) : (
-            <div className="flex gap-2 sm:gap-3 overflow-x-auto pt-3 pb-1 -mx-1 px-1 snap-x snap-mandatory">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 pb-1">
               {plans.map((plan, idx) => (
                 <PlanCard
                   key={plan.id}
@@ -194,10 +194,10 @@ export default function LandingPage() {
             {b.imageUrl ? (
               b.link ? (
                 <a href={b.link} target="_blank" rel="noreferrer" className="block w-full h-full">
-                  <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
+                  <img src={b.imageUrl} alt={b.title} className="w-full h-full object-contain sm:object-cover" />
                 </a>
               ) : (
-                <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
+                <img src={b.imageUrl} alt={b.title} className="w-full h-full object-contain sm:object-cover" />
               )
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-800 to-cyan-700 flex flex-col items-center justify-center">
@@ -248,7 +248,7 @@ function PlanCard({
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
       className={`relative flex items-center gap-3 rounded-xl px-3 sm:px-4 py-3 cursor-pointer transition-all duration-200
-        min-w-[220px] sm:min-w-0 sm:flex-1 snap-start shrink-0
+        w-full sm:flex-1
         ${highlighted
           ? 'bg-[#1a2e4a] border border-blue-500/60 ring-1 ring-blue-500/20 scale-[1.01]'
           : 'bg-[#111f33] border border-white/10 hover:bg-[#152238]'}`}
