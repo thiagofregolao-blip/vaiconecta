@@ -85,6 +85,16 @@ model Payment {
   @@index([apMac])
 }
 
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  imageUrl  String
+  link      String?
+  active    Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 model Voucher {
   id        String    @id @default(cuid())
   planId    String

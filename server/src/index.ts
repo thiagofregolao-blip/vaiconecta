@@ -16,6 +16,7 @@ import sessionsRouter from './routes/admin/sessions';
 import vouchersRouter from './routes/admin/vouchers';
 import storesRouter from './routes/admin/stores';
 import usersRouter from './routes/admin/users';
+import bannersRouter from './routes/admin/banners';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -44,6 +45,20 @@ app.use('/api/admin/sessions', adminAuth, sessionsRouter);
 app.use('/api/admin/vouchers', adminAuth, vouchersRouter);
 app.use('/api/admin/stores', adminAuth, storesRouter);
 app.use('/api/admin/users', adminAuth, usersRouter);
+app.use('/api/admin/banners', adminAuth, bannersRouter);
+
+// Banners ativos para a landing page (público)
+app.get('/api/banners', async (_req, res) => {
+  const banners = await prisma.banner.findMany({
+    where: { active: true },
+    orderBy: { order: 'asc' },
+  });
+  res.json(banners);
+});
+
+// Serve arquivos de upload
+const uploadsPath = path.join(__dirname, '../../uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 const clientDist = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDist));

@@ -18,10 +18,12 @@ function formatHours(h: number) {
   return `${h / 168} semana${h / 168 > 1 ? 's' : ''}`;
 }
 
-const BANNERS = [
-  { bg: 'from-blue-800 via-blue-700 to-cyan-700',       title: 'Publicidade 1', sub: 'Seu anúncio aqui' },
-  { bg: 'from-purple-800 via-purple-700 to-pink-700',   title: 'Publicidade 2', sub: 'Alcance milhares de usuários' },
-  { bg: 'from-emerald-800 via-green-700 to-teal-600',   title: 'Publicidade 3', sub: 'Anuncie na VaiConecta' },
+interface Banner { id: string; title: string; imageUrl: string; link: string | null }
+
+const FALLBACK_BANNERS = [
+  { id: '1', title: 'Publicidade 1', imageUrl: '', link: null },
+  { id: '2', title: 'Publicidade 2', imageUrl: '', link: null },
+  { id: '3', title: 'Publicidade 3', imageUrl: '', link: null },
 ];
 
 export default function LandingPage() {
@@ -39,10 +41,16 @@ export default function LandingPage() {
     queryFn: () => api.get('/plans').then((r) => r.data),
   });
 
+  const { data: banners = FALLBACK_BANNERS } = useQuery<Banner[]>({
+    queryKey: ['banners'],
+    queryFn: () => api.get('/banners').then((r) => r.data),
+  });
+
   useEffect(() => {
-    const t = setInterval(() => setBannerIdx((i) => (i + 1) % BANNERS.length), 5000);
+    if (banners.length === 0) return;
+    const t = setInterval(() => setBannerIdx((i) => (i + 1) % banners.length), 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [banners.length]);
 
   return (
     <div className="h-dvh flex flex-col overflow-hidden bg-[#0a1628] text-white">
@@ -134,29 +142,42 @@ export default function LandingPage() {
       </div>
 
       {/* ── 4. BANNER ROTATIVO ── */}
-      <div className="flex-1 relative overflow-hidden">
-        {BANNERS.map((b, i) => (
+      <div className="flex-1 relative overflow-hidden bg-slate-900">
+        {banners.map((b, i) => (
           <div
-            key={i}
-            className={`absolute inset-0 bg-gradient-to-br ${b.bg} flex flex-col items-center justify-center transition-opacity duration-700`}
+            key={b.id}
+            className="absolute inset-0 transition-opacity duration-700"
             style={{ opacity: i === bannerIdx ? 1 : 0 }}
           >
-            <span className="text-white/30 text-xs uppercase tracking-[0.3em] mb-4">Publicidade</span>
-            <p className="text-white font-black text-5xl md:text-7xl">{b.title}</p>
-            <p className="text-white/50 text-xl mt-3">{b.sub}</p>
+            {b.imageUrl ? (
+              b.link ? (
+                <a href={b.link} target="_blank" rel="noreferrer" className="block w-full h-full">
+                  <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
+                </a>
+              ) : (
+                <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
+              )
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-800 to-cyan-700 flex flex-col items-center justify-center">
+                <span className="text-white/30 text-xs uppercase tracking-[0.3em] mb-4">Publicidade</span>
+                <p className="text-white font-black text-5xl">{b.title}</p>
+              </div>
+            )}
           </div>
         ))}
 
         {/* Dots */}
-        <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2 z-10">
-          {BANNERS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setBannerIdx(i)}
-              className={`h-2 rounded-full transition-all cursor-pointer ${i === bannerIdx ? 'bg-white w-8' : 'bg-white/30 w-2'}`}
-            />
-          ))}
-        </div>
+        {banners.length > 1 && (
+          <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2 z-10">
+            {banners.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setBannerIdx(i)}
+                className={`h-2 rounded-full transition-all cursor-pointer ${i === bannerIdx ? 'bg-white w-8' : 'bg-white/30 w-2'}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── MODAIS ── */}

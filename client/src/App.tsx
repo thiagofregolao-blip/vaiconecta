@@ -8,6 +8,7 @@ import AdminPayments from './pages/admin/Payments';
 import AdminVouchers from './pages/admin/Vouchers';
 import AdminStores from './pages/admin/Stores';
 import AdminUsers from './pages/admin/Users';
+import AdminBanners from './pages/admin/Banners';
 import StoreDashboard from './pages/admin/StoreDashboard';
 import AdminLayout from './components/admin/Layout';
 
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="sessions" element={<AdminSessions />} />
           <Route path="payments" element={<AdminPayments />} />
           <Route path="vouchers" element={<AdminVouchers />} />
+          <Route path="banners" element={<AdminBanners />} />
         </Route>
       </Routes>
     </BrowserRouter>
