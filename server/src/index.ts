@@ -57,7 +57,7 @@ app.get('/api/banners', async (_req, res) => {
 });
 
 // Serve arquivos de upload
-const uploadsPath = path.join(__dirname, '../../uploads');
+const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 
 const clientDist = path.join(__dirname, '../../client/dist');
