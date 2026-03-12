@@ -194,10 +194,10 @@ export default function LandingPage() {
             {b.imageUrl ? (
               b.link ? (
                 <a href={b.link} target="_blank" rel="noreferrer" className="block w-full h-full">
-                  <img src={b.imageUrl} alt={b.title} className="w-full h-full object-contain sm:object-cover" />
+                  <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
                 </a>
               ) : (
-                <img src={b.imageUrl} alt={b.title} className="w-full h-full object-contain sm:object-cover" />
+                <img src={b.imageUrl} alt={b.title} className="w-full h-full object-cover" />
               )
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-800 to-cyan-700 flex flex-col items-center justify-center">
