@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Wifi, Tag, X, Users, ShieldCheck,
+  Wifi, Tag, X, User, Users, ShieldCheck,
   CreditCard, CheckCircle2, MapPin, Phone, Mail, Smartphone, Zap,
 } from 'lucide-react';
 import { api } from '../api';
@@ -18,6 +18,13 @@ function formatHours(h: number) {
   return `${h / 168} semana${h / 168 > 1 ? 's' : ''}`;
 }
 
+// Cor e ícone do card baseado em maxDevices
+function planStyle(maxDevices: number) {
+  if (maxDevices === 1)  return { bg: 'bg-blue-500',   icon: <User  className="w-5 h-5 text-white" /> };
+  if (maxDevices === 2)  return { bg: 'bg-orange-500', icon: <Users className="w-5 h-5 text-white" /> };
+  return                        { bg: 'bg-rose-500',   icon: <Users className="w-6 h-6 text-white" /> };
+}
+
 interface Banner { id: string; title: string; imageUrl: string; link: string | null }
 
 const FALLBACK_BANNERS = [
@@ -31,10 +38,11 @@ export default function LandingPage() {
   const macAddress = searchParams.get('mac') || '';
   const deviceIp   = searchParams.get('ip')  || '';
 
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [showVoucher,  setShowVoucher]  = useState(false);
-  const [activeModal,  setActiveModal]  = useState<ModalType>(null);
-  const [bannerIdx,    setBannerIdx]    = useState(0);
+  const [pixPlan,     setPixPlan]     = useState<Plan | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [showVoucher, setShowVoucher] = useState(false);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [bannerIdx,   setBannerIdx]   = useState(0);
 
   const { data: plans = [], isLoading } = useQuery<Plan[]>({
     queryKey: ['plans'],
@@ -46,11 +54,25 @@ export default function LandingPage() {
     queryFn: () => api.get('/banners').then((r) => r.data),
   });
 
+  // Destaca o primeiro plano por padrão ao carregar
+  useEffect(() => {
+    if (plans.length > 0 && !highlightId) setHighlightId(plans[0].id);
+  }, [plans]);
+
   useEffect(() => {
     if (banners.length === 0) return;
     const t = setInterval(() => setBannerIdx((i) => (i + 1) % banners.length), 5000);
     return () => clearInterval(t);
   }, [banners.length]);
+
+  function handleCardClick(plan: Plan) {
+    setHighlightId(plan.id);
+  }
+
+  function handleComprar(e: React.MouseEvent, plan: Plan) {
+    e.stopPropagation();
+    setPixPlan(plan);
+  }
 
   return (
     <div className="h-dvh flex flex-col overflow-hidden bg-[#0a1628] text-white">
@@ -62,13 +84,13 @@ export default function LandingPage() {
 
       {/* ── 2. HEADER ── */}
       <header className="shrink-0 bg-[#0d1b2e] border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center relative">
+        <div className="max-w-7xl mx-auto px-6 h-24 flex items-center relative">
           {/* Logo centralizado */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <img
               src="/logo02.png"
               alt="VaiConecta"
-              className="h-16 w-auto object-contain"
+              className="h-20 w-auto object-contain"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           </div>
@@ -95,11 +117,14 @@ export default function LandingPage() {
       <div className="shrink-0 bg-[#0d1b2e] border-b border-white/10 px-6 py-3">
         <div className="max-w-7xl mx-auto">
 
-          {/* Label Wi-Fi */}
+          {/* Label Wi-Fi com ícone animado */}
           <div className="flex items-center gap-2 mb-2.5">
-            <Wifi className="w-4 h-4 text-blue-400" />
+            <span className="relative flex shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-40" />
+              <Wifi className="relative w-4 h-4 text-blue-400" />
+            </span>
             <span className="text-white font-semibold text-sm">Wi-Fi 24 Horas</span>
-            <span className="text-slate-400 text-sm">— fique conectado onde você estiver</span>
+            <span className="text-slate-400 text-sm">— fique conectado nas suas compras no Paraguai</span>
             {macAddress && (
               <span className="ml-auto text-slate-600 text-xs font-mono bg-white/5 border border-white/10 rounded px-2 py-0.5">
                 {macAddress}
@@ -123,7 +148,9 @@ export default function LandingPage() {
                   key={plan.id}
                   plan={plan}
                   popular={idx === 0}
-                  onSelect={() => setSelectedPlan(plan)}
+                  highlighted={plan.id === highlightId}
+                  onClick={() => handleCardClick(plan)}
+                  onComprar={(e) => handleComprar(e, plan)}
                 />
               ))}
             </div>
@@ -169,8 +196,6 @@ export default function LandingPage() {
             )}
           </div>
         ))}
-
-        {/* Dots */}
         {banners.length > 1 && (
           <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2 z-10">
             {banners.map((_, i) => (
@@ -186,8 +211,8 @@ export default function LandingPage() {
 
       {/* ── MODAIS ── */}
       {activeModal && <InfoModal type={activeModal} onClose={() => setActiveModal(null)} />}
-      {selectedPlan && (
-        <PixModal plan={selectedPlan} macAddress={macAddress} deviceIp={deviceIp} onClose={() => setSelectedPlan(null)} />
+      {pixPlan && (
+        <PixModal plan={pixPlan} macAddress={macAddress} deviceIp={deviceIp} onClose={() => setPixPlan(null)} />
       )}
       {showVoucher && (
         <VoucherModal macAddress={macAddress} deviceIp={deviceIp} onClose={() => setShowVoucher(false)} />
@@ -197,16 +222,27 @@ export default function LandingPage() {
 }
 
 /* ─── PLAN CARD ─── */
-function PlanCard({ plan, popular, onSelect }: { plan: Plan; popular: boolean; onSelect: () => void }) {
+function PlanCard({
+  plan, popular, highlighted, onClick, onComprar,
+}: {
+  plan: Plan;
+  popular: boolean;
+  highlighted: boolean;
+  onClick: () => void;
+  onComprar: (e: React.MouseEvent) => void;
+}) {
+  const { bg, icon } = planStyle(plan.maxDevices);
+  const active = highlighted; // card está ativo (selecionado ou popular)
+
   return (
     <div
-      onClick={onSelect}
+      onClick={onClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onSelect()}
-      className={`relative flex-1 flex items-center gap-4 rounded-xl px-4 py-3 cursor-pointer transition-all
-        ${popular
-          ? 'bg-[#1a2e4a] border border-blue-500/60 ring-1 ring-blue-500/20'
+      onKeyDown={(e) => e.key === 'Enter' && onClick()}
+      className={`relative flex-1 flex items-center gap-4 rounded-xl px-4 py-3 cursor-pointer transition-all duration-200
+        ${active
+          ? 'bg-[#1a2e4a] border border-blue-500/60 ring-1 ring-blue-500/20 scale-[1.01]'
           : 'bg-[#111f33] border border-white/10 hover:bg-[#152238]'}`}
     >
       {popular && (
@@ -215,10 +251,9 @@ function PlanCard({ plan, popular, onSelect }: { plan: Plan; popular: boolean; o
         </span>
       )}
 
-      {/* Ícone */}
-      <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center
-        ${popular ? 'bg-blue-500/25 border border-blue-500/40' : 'bg-white/8 border border-white/15'}`}>
-        <Users className={`w-5 h-5 ${popular ? 'text-blue-300' : 'text-slate-400'}`} />
+      {/* Ícone colorido com boneco(s) */}
+      <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${bg}`}>
+        {icon}
       </div>
 
       {/* Texto */}
@@ -229,13 +264,14 @@ function PlanCard({ plan, popular, onSelect }: { plan: Plan; popular: boolean; o
 
       {/* Preço + botão */}
       <div className="flex items-center gap-3 shrink-0">
-        <p className={`font-extrabold text-xl ${popular ? 'text-blue-300' : 'text-white'}`}>
+        <p className={`font-extrabold text-xl ${active ? 'text-yellow-400' : 'text-white'}`}>
           R$ {plan.price.toFixed(2).replace('.', ',')}
         </p>
         <button
+          onClick={onComprar}
           className={`flex items-center gap-1 text-sm font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap
-            ${popular
-              ? 'bg-yellow-400 hover:bg-yellow-300 text-black font-black'
+            ${active
+              ? 'bg-yellow-400 hover:bg-yellow-300 text-black'
               : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'}`}
         >
           Comprar →
