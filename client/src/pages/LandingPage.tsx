@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Wifi, Tag, X, User, Users, ShieldCheck,
-  CreditCard, CheckCircle2, MapPin, Phone, Mail, Smartphone, Zap,
+  CreditCard, CheckCircle2, MapPin, Phone, Mail, Smartphone, Zap, Menu,
 } from 'lucide-react';
 import { api } from '../api';
 import PixModal from '../components/PixModal';
@@ -18,11 +18,10 @@ function formatHours(h: number) {
   return `${h / 168} semana${h / 168 > 1 ? 's' : ''}`;
 }
 
-// Cor e ícone do card baseado em maxDevices
 function planStyle(maxDevices: number) {
-  if (maxDevices === 1)  return { bg: 'bg-blue-500',   icon: <User  className="w-5 h-5 text-white" /> };
-  if (maxDevices === 2)  return { bg: 'bg-orange-500', icon: <Users className="w-5 h-5 text-white" /> };
-  return                        { bg: 'bg-rose-500',   icon: <Users className="w-6 h-6 text-white" /> };
+  if (maxDevices === 1) return { bg: 'bg-blue-500',   icon: <User  className="w-5 h-5 text-white" /> };
+  if (maxDevices === 2) return { bg: 'bg-orange-500', icon: <Users className="w-5 h-5 text-white" /> };
+  return                       { bg: 'bg-rose-500',   icon: <Users className="w-6 h-6 text-white" /> };
 }
 
 interface Banner { id: string; title: string; imageUrl: string; link: string | null }
@@ -38,11 +37,12 @@ export default function LandingPage() {
   const macAddress = searchParams.get('mac') || '';
   const deviceIp   = searchParams.get('ip')  || '';
 
-  const [pixPlan,     setPixPlan]     = useState<Plan | null>(null);
-  const [highlightId, setHighlightId] = useState<string | null>(null);
-  const [showVoucher, setShowVoucher] = useState(false);
-  const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [bannerIdx,   setBannerIdx]   = useState(0);
+  const [pixPlan,      setPixPlan]      = useState<Plan | null>(null);
+  const [highlightId,  setHighlightId]  = useState<string | null>(null);
+  const [showVoucher,  setShowVoucher]  = useState(false);
+  const [activeModal,  setActiveModal]  = useState<ModalType>(null);
+  const [bannerIdx,    setBannerIdx]    = useState(0);
+  const [mobileMenu,   setMobileMenu]   = useState(false);
 
   const { data: plans = [], isLoading } = useQuery<Plan[]>({
     queryKey: ['plans'],
@@ -54,7 +54,6 @@ export default function LandingPage() {
     queryFn: () => api.get('/banners').then((r) => r.data),
   });
 
-  // Destaca o primeiro plano por padrão ao carregar
   useEffect(() => {
     if (plans.length > 0 && !highlightId) setHighlightId(plans[0].id);
   }, [plans]);
@@ -65,74 +64,91 @@ export default function LandingPage() {
     return () => clearInterval(t);
   }, [banners.length]);
 
-  function handleCardClick(plan: Plan) {
-    setHighlightId(plan.id);
-  }
-
   function handleComprar(e: React.MouseEvent, plan: Plan) {
     e.stopPropagation();
     setPixPlan(plan);
   }
 
+  const navItems = [
+    { key: 'como-funciona' as ModalType, label: 'Como funciona' },
+    { key: 'sobre'         as ModalType, label: 'Sobre' },
+    { key: 'contato'       as ModalType, label: 'Contato' },
+  ];
+
   return (
     <div className="h-dvh flex flex-col overflow-hidden bg-[#0a1628] text-white">
 
       {/* ── 1. BARRA TOPO ── */}
-      <div className="shrink-0 bg-gradient-to-r from-orange-500 to-red-500 py-2 text-center text-sm font-semibold tracking-wide">
+      <div className="shrink-0 bg-gradient-to-r from-orange-500 to-red-500 py-1.5 text-center text-xs sm:text-sm font-semibold tracking-wide">
         Conecte-se agora · Wi-Fi de alta velocidade onde você está!
       </div>
 
       {/* ── 2. HEADER ── */}
       <header className="shrink-0 bg-[#0d1b2e] border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 h-24 flex items-center relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-24 flex items-center relative">
           {/* Logo centralizado */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <img
               src="/logo02.png"
               alt="VaiConecta"
-              className="h-20 w-auto object-contain"
+              className="h-12 sm:h-20 w-auto object-contain"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           </div>
-          {/* Nav à direita */}
-          <nav className="ml-auto flex items-center gap-6 relative z-10">
-            {([
-              { key: 'como-funciona', label: 'Como funciona' },
-              { key: 'sobre',         label: 'Sobre' },
-              { key: 'contato',       label: 'Contato' },
-            ] as { key: ModalType; label: string }[]).map(({ key, label }) => (
-              <button
-                key={key!}
-                onClick={() => setActiveModal(key)}
-                className="text-slate-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
-              >
+
+          {/* Nav desktop */}
+          <nav className="ml-auto hidden sm:flex items-center gap-5 relative z-10">
+            {navItems.map(({ key, label }) => (
+              <button key={key!} onClick={() => setActiveModal(key)}
+                className="text-slate-300 hover:text-white text-sm font-medium transition-colors cursor-pointer">
                 {label}
               </button>
             ))}
           </nav>
+
+          {/* Hamburger mobile */}
+          <button onClick={() => setMobileMenu(!mobileMenu)}
+            className="ml-auto sm:hidden relative z-10 text-slate-300 hover:text-white cursor-pointer p-1">
+            <Menu className="w-5 h-5" />
+          </button>
         </div>
+
+        {/* Mobile menu dropdown */}
+        {mobileMenu && (
+          <div className="sm:hidden bg-[#0d1b2e] border-t border-white/10 px-4 py-3 flex flex-col gap-2">
+            {navItems.map(({ key, label }) => (
+              <button key={key!} onClick={() => { setActiveModal(key); setMobileMenu(false); }}
+                className="text-left text-slate-300 hover:text-white text-sm font-medium py-2 cursor-pointer">
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
-      {/* ── 3. FAIXA DE PLANOS ── */}
-      <div className="shrink-0 bg-[#0d1b2e] border-b border-white/10 px-6 py-3">
+      {/* ── 3. FAIXA DE PLANOS — gradiente radial centrado em #11213C ── */}
+      <div
+        className="shrink-0 border-b border-white/10 px-4 sm:px-6 py-3"
+        style={{ background: 'radial-gradient(ellipse at center, #11213C 0%, #060d18 100%)' }}
+      >
         <div className="max-w-7xl mx-auto">
 
-          {/* Label Wi-Fi com ícone animado */}
+          {/* Label Wi-Fi */}
           <div className="flex items-center gap-2 mb-2.5">
             <span className="relative flex shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-40" />
               <Wifi className="relative w-4 h-4 text-blue-400" />
             </span>
             <span className="text-white font-semibold text-sm">Wi-Fi 24 Horas</span>
-            <span className="text-slate-400 text-sm">— fique conectado nas suas compras no Paraguai</span>
+            <span className="text-slate-400 text-sm hidden sm:inline">— fique conectado nas suas compras no Paraguai</span>
             {macAddress && (
-              <span className="ml-auto text-slate-600 text-xs font-mono bg-white/5 border border-white/10 rounded px-2 py-0.5">
+              <span className="ml-auto text-slate-600 text-xs font-mono bg-white/5 border border-white/10 rounded px-2 py-0.5 hidden sm:inline">
                 {macAddress}
               </span>
             )}
           </div>
 
-          {/* Cards dos planos */}
+          {/* Cards dos planos — scroll horizontal no mobile */}
           {isLoading ? (
             <div className="flex gap-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -142,14 +158,14 @@ export default function LandingPage() {
           ) : plans.length === 0 ? (
             <div className="text-slate-500 text-sm text-center py-4">Nenhum plano disponível</div>
           ) : (
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
               {plans.map((plan, idx) => (
                 <PlanCard
                   key={plan.id}
                   plan={plan}
                   popular={idx === 0}
                   highlighted={plan.id === highlightId}
-                  onClick={() => handleCardClick(plan)}
+                  onClick={() => setHighlightId(plan.id)}
                   onComprar={(e) => handleComprar(e, plan)}
                 />
               ))}
@@ -159,13 +175,11 @@ export default function LandingPage() {
           {/* Rodapé planos */}
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Pagamento seguro via Mercado Pago · Pix e mais
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xs:inline">Pagamento seguro via Mercado Pago · </span>Pix e mais
             </div>
-            <button
-              onClick={() => setShowVoucher(true)}
-              className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer"
-            >
+            <button onClick={() => setShowVoucher(true)}
+              className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-xs transition-colors cursor-pointer shrink-0">
               <Tag className="w-3 h-3" /> Tenho um voucher
             </button>
           </div>
@@ -175,11 +189,8 @@ export default function LandingPage() {
       {/* ── 4. BANNER ROTATIVO ── */}
       <div className="flex-1 relative overflow-hidden bg-slate-900">
         {banners.map((b, i) => (
-          <div
-            key={b.id}
-            className="absolute inset-0 transition-opacity duration-700"
-            style={{ opacity: i === bannerIdx ? 1 : 0 }}
-          >
+          <div key={b.id} className="absolute inset-0 transition-opacity duration-700"
+            style={{ opacity: i === bannerIdx ? 1 : 0 }}>
             {b.imageUrl ? (
               b.link ? (
                 <a href={b.link} target="_blank" rel="noreferrer" className="block w-full h-full">
@@ -191,19 +202,19 @@ export default function LandingPage() {
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-blue-800 to-cyan-700 flex flex-col items-center justify-center">
                 <span className="text-white/30 text-xs uppercase tracking-[0.3em] mb-4">Publicidade</span>
-                <p className="text-white font-black text-5xl">{b.title}</p>
+                <p className="text-white font-black text-4xl sm:text-5xl">{b.title}</p>
               </div>
             )}
+            {/* Overlay escuro 15% com leve blur */}
+            <div className="absolute inset-0 bg-black/15 backdrop-blur-[1px]" />
           </div>
         ))}
+
         {banners.length > 1 && (
-          <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2 z-10">
+          <div className="absolute bottom-4 sm:bottom-6 inset-x-0 flex justify-center gap-2 z-10">
             {banners.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setBannerIdx(i)}
-                className={`h-2 rounded-full transition-all cursor-pointer ${i === bannerIdx ? 'bg-white w-8' : 'bg-white/30 w-2'}`}
-              />
+              <button key={i} onClick={() => setBannerIdx(i)}
+                className={`h-2 rounded-full transition-all cursor-pointer ${i === bannerIdx ? 'bg-white w-8' : 'bg-white/30 w-2'}`} />
             ))}
           </div>
         )}
@@ -225,14 +236,10 @@ export default function LandingPage() {
 function PlanCard({
   plan, popular, highlighted, onClick, onComprar,
 }: {
-  plan: Plan;
-  popular: boolean;
-  highlighted: boolean;
-  onClick: () => void;
-  onComprar: (e: React.MouseEvent) => void;
+  plan: Plan; popular: boolean; highlighted: boolean;
+  onClick: () => void; onComprar: (e: React.MouseEvent) => void;
 }) {
   const { bg, icon } = planStyle(plan.maxDevices);
-  const active = highlighted; // card está ativo (selecionado ou popular)
 
   return (
     <div
@@ -240,37 +247,38 @@ function PlanCard({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      className={`relative flex-1 flex items-center gap-4 rounded-xl px-4 py-3 cursor-pointer transition-all duration-200
-        ${active
+      className={`relative flex items-center gap-3 rounded-xl px-3 sm:px-4 py-3 cursor-pointer transition-all duration-200
+        min-w-[220px] sm:min-w-0 sm:flex-1 snap-start shrink-0
+        ${highlighted
           ? 'bg-[#1a2e4a] border border-blue-500/60 ring-1 ring-blue-500/20 scale-[1.01]'
           : 'bg-[#111f33] border border-white/10 hover:bg-[#152238]'}`}
     >
       {popular && (
-        <span className="absolute -top-2.5 left-4 bg-orange-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full">
+        <span className="absolute -top-2.5 left-3 bg-orange-500 text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full">
           Mais vendido
         </span>
       )}
 
-      {/* Ícone colorido com boneco(s) */}
-      <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${bg}`}>
+      {/* Ícone colorido */}
+      <div className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center ${bg}`}>
         {icon}
       </div>
 
       {/* Texto */}
       <div className="flex-1 min-w-0">
-        <p className="text-white font-bold text-sm leading-tight">{plan.name}</p>
-        <p className="text-slate-400 text-xs mt-0.5">{formatHours(plan.hours)} de acesso contínuo</p>
+        <p className="text-white font-bold text-xs sm:text-sm leading-tight truncate">{plan.name}</p>
+        <p className="text-slate-400 text-[10px] sm:text-xs mt-0.5">{formatHours(plan.hours)} de acesso contínuo</p>
       </div>
 
       {/* Preço + botão */}
-      <div className="flex items-center gap-3 shrink-0">
-        <p className={`font-extrabold text-xl ${active ? 'text-yellow-400' : 'text-white'}`}>
-          R$ {plan.price.toFixed(2).replace('.', ',')}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <p className={`font-extrabold text-base sm:text-xl ${highlighted ? 'text-yellow-400' : 'text-white'}`}>
+          R$&nbsp;{plan.price.toFixed(2).replace('.', ',')}
         </p>
         <button
           onClick={onComprar}
-          className={`flex items-center gap-1 text-sm font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap
-            ${active
+          className={`flex items-center gap-0.5 text-xs sm:text-sm font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap
+            ${highlighted
               ? 'bg-yellow-400 hover:bg-yellow-300 text-black'
               : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'}`}
         >
@@ -283,19 +291,15 @@ function PlanCard({
 
 /* ─── INFO MODAL ─── */
 function InfoModal({ type, onClose }: { type: 'como-funciona' | 'sobre' | 'contato'; onClose: () => void }) {
-  const titles = {
-    'como-funciona': 'Como funciona',
-    sobre:           'Sobre a VaiConecta',
-    contato:         'Fale conosco',
-  };
+  const titles = { 'como-funciona': 'Como funciona', sobre: 'Sobre a VaiConecta', contato: 'Fale conosco' };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d1b2e] p-6 animate-slide-up max-h-[85dvh] overflow-y-auto">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d1b2e] p-5 sm:p-6 animate-slide-up max-h-[85dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-bold text-xl">{titles[type]}</h2>
+          <h2 className="text-white font-bold text-lg sm:text-xl">{titles[type]}</h2>
           <button onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer">
+            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white cursor-pointer shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
