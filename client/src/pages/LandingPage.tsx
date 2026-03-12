@@ -210,7 +210,7 @@ function PlanCard({ plan, popular, onSelect }: { plan: Plan; popular: boolean; o
         <button
           className={`flex items-center gap-1 text-sm font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer whitespace-nowrap
             ${popular
-              ? 'bg-blue-500 hover:bg-blue-400 text-white'
+              ? 'bg-yellow-400 hover:bg-yellow-300 text-black font-black'
               : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'}`}
         >
           Comprar →
