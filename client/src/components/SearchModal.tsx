@@ -51,7 +51,7 @@ export default function SearchModal({ initialQuery, onClose }: Props) {
       const res = await api.post('/search', { query, history });
       const data: SearchResult = res.data;
       setMessages(m => [...m, { role: 'ai', text: data.aiMessage || 'Busca realizada!' }]);
-      if (data.products?.length) setProducts(data.products);
+      setProducts(data.products || []);
     } catch {
       setMessages(m => [...m, { role: 'ai', text: 'Não consegui buscar agora. Tenta de novo!' }]);
     } finally {
