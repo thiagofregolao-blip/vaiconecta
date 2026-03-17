@@ -13,8 +13,6 @@ interface AdminUser {
   createdAt: string;
 }
 
-interface Plan { id: string; name: string }
-
 const emptyForm = { username: '', password: '', name: '', email: '', role: 'STORE_ADMIN', storeId: '' };
 
 export default function AdminUsers() {
@@ -176,7 +174,7 @@ export default function AdminUsers() {
 
               {error && <p className="text-red-400 text-sm">{error}</p>}
 
-              <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.username || !form.password}
+              <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !form.username || !form.password || (form.role === 'STORE_ADMIN' && !form.storeId)}
                 className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer">
                 {createMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Criar Usuário'}
               </button>

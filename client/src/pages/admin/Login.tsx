@@ -30,8 +30,13 @@ export default function AdminLogin() {
     localStorage.setItem('vc_role', data.role);
     localStorage.setItem('vc_store', data.store ? JSON.stringify(data.store) : '');
     localStorage.setItem('vc_name', data.name || data.username);
-    if (data.role === 'STORE_ADMIN' && data.store) {
-      navigate(`/admin/store/${data.store.id}`);
+    if (data.role === 'STORE_ADMIN') {
+      if (data.store) {
+        navigate(`/admin/store/${data.store.id}`);
+      } else {
+        localStorage.clear();
+        throw new Error('Usuário sem loja vinculada. Contate o administrador.');
+      }
     } else {
       navigate('/admin');
     }
