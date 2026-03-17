@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Wifi, Tag, X, User, Users, ShieldCheck,
-  CreditCard, CheckCircle2, MapPin, Phone, Mail, Smartphone, Zap, Menu,
+  CreditCard, CheckCircle2, MapPin, Phone, Mail, Smartphone, Zap, Menu, Search,
 } from 'lucide-react';
 import { api } from '../api';
 import PixModal from '../components/PixModal';
 import VoucherModal from '../components/VoucherModal';
+import SearchModal from '../components/SearchModal';
 
 interface Plan { id: string; name: string; price: number; hours: number; maxDevices: number }
 type ModalType = 'como-funciona' | 'sobre' | 'contato' | null;
@@ -43,6 +44,18 @@ export default function LandingPage() {
   const [activeModal,  setActiveModal]  = useState<ModalType>(null);
   const [bannerIdx,    setBannerIdx]    = useState(0);
   const [mobileMenu,   setMobileMenu]   = useState(false);
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [showSearch,   setShowSearch]   = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const QUICK_SEARCHES = ['iPhone', 'Samsung', 'Perfume', 'Notebook', 'Drone'];
+
+  function handleSearch(q?: string) {
+    const query = (q ?? searchQuery).trim();
+    if (!query) return;
+    setSearchQuery(query);
+    setShowSearch(true);
+  }
 
   const { data: plans = [], isLoading } = useQuery<Plan[]>({
     queryKey: ['plans'],
@@ -187,7 +200,7 @@ export default function LandingPage() {
       </div>
 
       {/* ── 4. BANNER ROTATIVO ── */}
-      <div className="flex-1 relative overflow-hidden bg-slate-900">
+      <div className="flex-1 relative overflow-hidden bg-slate-900" onClick={() => searchInputRef.current?.focus()}>
         {banners.map((b, i) => (
           <div key={b.id} className="absolute inset-0 transition-opacity duration-700"
             style={{ opacity: i === bannerIdx ? 1 : 0 }}>
@@ -218,6 +231,44 @@ export default function LandingPage() {
             ))}
           </div>
         )}
+
+        {/* ── BARRA DE BUSCA CENTRALIZADA ── */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
+          <div className="w-full max-w-xl pointer-events-auto" onClick={e => e.stopPropagation()}>
+            {/* Search input */}
+            <div className="flex items-center bg-white rounded-full shadow-2xl overflow-hidden h-12 sm:h-14">
+              <Search className="w-5 h-5 text-slate-400 ml-4 shrink-0" />
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                placeholder="Buscar produtos, marcas, categorias..."
+                className="flex-1 px-3 text-slate-800 placeholder-slate-400 text-sm sm:text-base outline-none bg-transparent h-full"
+              />
+              <button
+                onClick={() => handleSearch()}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 sm:px-6 h-full text-sm sm:text-base cursor-pointer transition-colors shrink-0"
+              >
+                Buscar
+              </button>
+            </div>
+
+            {/* Quick searches */}
+            <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">
+              <span className="text-white/70 text-xs">Buscas frequentes:</span>
+              {QUICK_SEARCHES.map(q => (
+                <button
+                  key={q}
+                  onClick={() => handleSearch(q)}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full border border-white/30 cursor-pointer transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── MODAIS ── */}
@@ -227,6 +278,9 @@ export default function LandingPage() {
       )}
       {showVoucher && (
         <VoucherModal macAddress={macAddress} deviceIp={deviceIp} onClose={() => setShowVoucher(false)} />
+      )}
+      {showSearch && (
+        <SearchModal initialQuery={searchQuery} onClose={() => setShowSearch(false)} />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import prisma from './lib/prisma';
 import webhookRouter from './routes/webhook';
 import plansRouter from './routes/plans';
 import paymentsRouter from './routes/payments';
+import searchRouter from './routes/search';
 
 import authAdminRouter from './routes/admin/auth';
 import adminPlansRouter from './routes/admin/plans';
@@ -37,6 +38,7 @@ app.use('/webhook/mercadopago', webhookRouter);
 
 app.use('/api/plans', plansRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/search', searchRouter);
 
 app.use('/api/admin', authAdminRouter);
 
