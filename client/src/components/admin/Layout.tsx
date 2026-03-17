@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Activity, CreditCard, Tag, LogOut, Wifi, Menu, X, Users, Store, Image } from 'lucide-react';
+import { LayoutDashboard, Package, Activity, CreditCard, Tag, LogOut, Wifi, Menu, X, Users, Store, Image, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 
 const nav = [
@@ -11,6 +11,7 @@ const nav = [
   { to: '/admin/payments', icon: CreditCard, label: 'Pagamentos' },
   { to: '/admin/vouchers', icon: Tag, label: 'Vouchers' },
   { to: '/admin/banners', icon: Image, label: 'Banners' },
+  { to: '/admin/catalog', icon: ShoppingBag, label: 'Catálogo Vai de Busca' },
 ];
 
 export default function AdminLayout() {

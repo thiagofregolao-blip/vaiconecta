@@ -18,6 +18,7 @@ import vouchersRouter from './routes/admin/vouchers';
 import storesRouter from './routes/admin/stores';
 import usersRouter from './routes/admin/users';
 import bannersRouter from './routes/admin/banners';
+import catalogAdminRouter from './routes/admin/catalog';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,6 +49,7 @@ app.use('/api/admin/vouchers', adminAuth, vouchersRouter);
 app.use('/api/admin/stores', adminAuth, storesRouter);
 app.use('/api/admin/users', adminAuth, usersRouter);
 app.use('/api/admin/banners', adminAuth, bannersRouter);
+app.use('/api/admin/catalog', adminAuth, catalogAdminRouter);
 
 // Banners ativos para a landing page (público)
 app.get('/api/banners', async (_req, res) => {

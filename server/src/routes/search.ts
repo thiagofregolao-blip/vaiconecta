@@ -1,9 +1,32 @@
 import { Router, Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
 const router = Router();
-
+const prisma = new PrismaClient();
 const N8N_WEBHOOK = 'https://agrofarmdigital.app.n8n.cloud/webhook/vai-de-busca';
 
+// GET /api/search/catalog?q=iphone&limit=10  — chamado pelo n8n
+router.get('/catalog', async (req: Request, res: Response) => {
+  const q = (req.query.q as string || '').trim();
+  const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+
+  if (!q) return res.json({ products: [] });
+
+  const words = q.split(/\s+/).filter(w => w.length > 1);
+  const products = await prisma.catalogProduct.findMany({
+    where: {
+      OR: words.map(w => ({
+        nome: { contains: w, mode: 'insensitive' as const },
+      })),
+    },
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  res.json({ products });
+});
+
+// POST /api/search — chamado pelo frontend, repassa ao n8n
 router.post('/', async (req: Request, res: Response) => {
   const { query, history } = req.body;
   if (!query || typeof query !== 'string' || query.trim().length === 0) {

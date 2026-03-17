@@ -105,3 +105,18 @@ model Voucher {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 }
+
+model CatalogProduct {
+  id          String   @id @default(cuid())
+  nome        String
+  precoGs     Float?
+  precoUsd    Float?
+  precoBrl    Float?
+  imagemUrl   String
+  produtoUrl  String
+  loja        String   @default("LG Importados")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([nome])
+}
