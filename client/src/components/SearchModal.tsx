@@ -44,10 +44,11 @@ export default function SearchModal({ initialQuery, onClose }: Props) {
   }, [messages, loading]);
 
   async function doSearch(query: string) {
+    const history = messages.slice(-10);
     setMessages(m => [...m, { role: 'user', text: query }]);
     setLoading(true);
     try {
-      const res = await api.post('/search', { query });
+      const res = await api.post('/search', { query, history });
       const data: SearchResult = res.data;
       setMessages(m => [...m, { role: 'ai', text: data.aiMessage || 'Busca realizada!' }]);
       if (data.products?.length) setProducts(data.products);

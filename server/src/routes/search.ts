@@ -5,7 +5,7 @@ const router = Router();
 const N8N_WEBHOOK = 'https://agrofarmdigital.app.n8n.cloud/webhook/vai-de-busca';
 
 router.post('/', async (req: Request, res: Response) => {
-  const { query } = req.body;
+  const { query, history } = req.body;
   if (!query || typeof query !== 'string' || query.trim().length === 0) {
     return res.status(400).json({ error: 'query obrigatório' });
   }
@@ -14,7 +14,7 @@ router.post('/', async (req: Request, res: Response) => {
     const response = await fetch(N8N_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: query.trim() }),
+      body: JSON.stringify({ query: query.trim(), history: Array.isArray(history) ? history : [] }),
       signal: AbortSignal.timeout(60000),
     });
 
