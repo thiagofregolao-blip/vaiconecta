@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 
 const router = Router();
 
-const N8N_WEBHOOK = 'https://agrofarmdigital.app.n8n.cloud/webhook-test/vai-de-busca';
+const N8N_WEBHOOK = 'https://agrofarmdigital.app.n8n.cloud/webhook/vai-de-busca';
 
 router.post('/', async (req: Request, res: Response) => {
   const { query } = req.body;
