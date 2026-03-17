@@ -218,8 +218,9 @@ export default function LandingPage() {
                 <p className="text-white font-black text-4xl sm:text-5xl">{b.title}</p>
               </div>
             )}
-            {/* Overlay escuro 10% */}
-            <div className="absolute inset-0 bg-black/10" />
+            {/* Overlay escuro para destacar barra de busca */}
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 100%)' }} />
           </div>
         ))}
 
@@ -236,7 +237,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-4 pointer-events-none">
           <div className="w-full max-w-xl pointer-events-auto" onClick={e => e.stopPropagation()}>
             {/* Search input */}
-            <div className="flex items-center bg-white rounded-full shadow-2xl overflow-hidden h-12 sm:h-14">
+            <div className="flex items-center bg-white rounded-full overflow-hidden h-12 sm:h-14" style={{ boxShadow: '0 0 0 4px rgba(255,255,255,0.15), 0 8px 40px rgba(0,0,0,0.5)' }}>
               <Search className="w-5 h-5 text-slate-400 ml-4 shrink-0" />
               <input
                 ref={searchInputRef}
