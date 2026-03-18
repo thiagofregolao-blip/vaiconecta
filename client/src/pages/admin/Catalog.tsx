@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Upload, Trash2, Search, Package, AlertCircle, CheckCircle, Loader2, X
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { adminApi } from '../../api';
 
 interface CatalogProduct {
@@ -27,52 +28,41 @@ interface ParsedRow {
   loja?: string;
 }
 
-function parseNum(val: string): number | undefined {
-  if (!val) return undefined;
-  const clean = val.replace(/[^\d.,]/g, '').replace(',', '.');
+function parseNum(val: unknown): number | undefined {
+  if (val === null || val === undefined || val === '') return undefined;
+  if (typeof val === 'number') return isNaN(val) ? undefined : val;
+  const clean = String(val).replace(/[^\d.,]/g, '').replace(',', '.');
   const n = parseFloat(clean);
   return isNaN(n) ? undefined : n;
 }
 
-function parseCSV(text: string): ParsedRow[] {
-  const lines = text.trim().split('\n').filter(Boolean);
-  if (lines.length < 2) return [];
+function parseSheet(buffer: ArrayBuffer): ParsedRow[] {
+  const wb = XLSX.read(buffer, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
+  if (rows.length === 0) return [];
 
-  // Detect separator
-  const sep = lines[0].includes(';') ? ';' : ',';
+  const colKey = (row: Record<string, unknown>, names: string[]): unknown => {
+    const key = Object.keys(row).find(k =>
+      names.some(n => k.toLowerCase().includes(n))
+    );
+    return key ? row[key] : '';
+  };
 
-  const header = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-
-  const colIndex = (names: string[]) =>
-    names.reduce((found, n) => found >= 0 ? found : header.findIndex(h => h.includes(n)), -1);
-
-  const iNome    = colIndex(['produto', 'nome', 'product', 'name', 'descri']);
-  const iGs      = colIndex(['gs', 'guarani', 'preço (g', 'preco (g', 'price (g']);
-  const iUsd     = colIndex(['usd', '($)', 'preço (u', 'preco (u', 'price (u', 'dollar']);
-  const iBrl     = colIndex(['brl', 'r$', 'real', 'preço (b', 'preco (b', 'price (b']);
-  const iImg     = colIndex(['imagem', 'image', 'foto', 'img', 'url imagem', 'url_img']);
-  const iUrl     = colIndex(['produto url', 'url produto', 'product url', 'url_prod', 'link']);
-  const iLoja    = colIndex(['loja', 'store', 'shop']);
-
-  const rows: ParsedRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g, ''));
-    const nome = iNome >= 0 ? cols[iNome] : '';
-    const imagemUrl = iImg >= 0 ? cols[iImg] : '';
-    const produtoUrl = iUrl >= 0 ? cols[iUrl] : '';
-    if (!nome || !produtoUrl) continue;
-
-    rows.push({
+  return rows.flatMap(row => {
+    const nome     = String(colKey(row, ['produto', 'nome', 'product', 'name', 'descri']) ?? '').trim();
+    const produtoUrl = String(colKey(row, ['url produto', 'produto url', 'product url', 'url_prod', 'link']) ?? '').trim();
+    if (!nome || !produtoUrl) return [];
+    return [{
       nome,
-      precoGs:  iGs  >= 0 ? parseNum(cols[iGs])  : undefined,
-      precoUsd: iUsd >= 0 ? parseNum(cols[iUsd]) : undefined,
-      precoBrl: iBrl >= 0 ? parseNum(cols[iBrl]) : undefined,
-      imagemUrl,
+      precoGs:  parseNum(colKey(row, ['gs', 'guarani', 'preço (g', 'preco (g'])),
+      precoUsd: parseNum(colKey(row, ['usd', '($)', 'preço (u', 'preco (u', 'dollar'])),
+      precoBrl: parseNum(colKey(row, ['brl', 'r$', 'real', 'preço (b', 'preco (b'])),
+      imagemUrl: String(colKey(row, ['imagem', 'image', 'foto', 'img', 'url imagem']) ?? '').trim(),
       produtoUrl,
-      loja: iLoja >= 0 && cols[iLoja] ? cols[iLoja] : undefined,
-    });
-  }
-  return rows;
+      loja: String(colKey(row, ['loja', 'store', 'shop']) ?? '').trim() || undefined,
+    }];
+  });
 }
 
 export default function AdminCatalog() {
@@ -120,12 +110,12 @@ export default function AdminCatalog() {
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = e => {
-      const text = e.target?.result as string;
-      const rows = parseCSV(text);
+      const buffer = e.target?.result as ArrayBuffer;
+      const rows = parseSheet(buffer);
       setPreview(rows);
-      if (rows.length === 0) showToast('Nenhum produto válido encontrado no arquivo', false);
+      if (rows.length === 0) showToast('Nenhum produto válido encontrado na planilha', false);
     };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsArrayBuffer(file);
   };
 
   const filtered = products.filter(p =>
@@ -170,12 +160,14 @@ export default function AdminCatalog() {
       {/* Upload CSV */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-6">
         <h2 className="text-white font-semibold mb-4 flex items-center gap-2">
-          <Upload size={18} /> Importar Planilha CSV
+          <Upload size={18} /> Importar Planilha
         </h2>
 
         <div className="text-xs text-slate-400 mb-4 bg-white/5 rounded-lg p-3">
           <strong className="text-slate-300">Colunas esperadas (ordem livre):</strong>{' '}
           Produto/Nome · Preço (Gs) · Preço (USD) · Preço (BRL) · URL Imagem · URL Produto · Loja (opcional)
+          <br />
+          <span className="text-slate-500 mt-1 block">Formatos aceitos: .xlsx, .xls, .ods</span>
         </div>
 
         {/* Drop zone */}
@@ -187,13 +179,13 @@ export default function AdminCatalog() {
         >
           <Package size={32} className="mx-auto text-slate-400 mb-2" />
           <p className="text-slate-300 text-sm">
-            {fileName ? fileName : 'Arraste um CSV ou clique para selecionar'}
+            {fileName ? fileName : 'Arraste a planilha ou clique para selecionar'}
           </p>
-          <p className="text-slate-500 text-xs mt-1">Arquivos .csv com separador vírgula ou ponto-e-vírgula</p>
+          <p className="text-slate-500 text-xs mt-1">Arquivos .xlsx, .xls ou .ods</p>
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".xlsx,.xls,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
           />
