@@ -23,7 +23,16 @@ router.get('/catalog', async (req: Request, res: Response) => {
     orderBy: { createdAt: 'desc' },
   });
 
-  res.json({ products });
+  // Mapeia para snake_case que o SearchModal espera
+  res.json({
+    products: products.map(p => ({
+      nome: p.nome,
+      imagem_url: p.imagemUrl,
+      produto_url: p.produtoUrl,
+      preco_numerico: p.precoBrl ?? p.precoUsd ?? 0,
+      loja: p.loja,
+    })),
+  });
 });
 
 // POST /api/search — chamado pelo frontend, repassa ao n8n
