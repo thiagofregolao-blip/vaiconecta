@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { DollarSign, Users, Wifi, TrendingUp, RefreshCw, Clock } from 'lucide-react';
+import { DollarSign, Users, Wifi, TrendingUp, RefreshCw, Clock, ShoppingBag, BarChart2 } from 'lucide-react';
 import { adminApi } from '../../api';
 import StatCard from '../../components/admin/StatCard';
+import AdminCatalog from './Catalog';
 
 interface StoreDashboardData {
   store: { id: string; name: string; commissionPct: number };
@@ -24,17 +26,12 @@ interface StoreDashboardData {
   }[];
 }
 
-const statusMap: Record<string, { label: string; color: string }> = {
-  PENDING:   { label: 'Pendente',  color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
-  APPROVED:  { label: 'Aprovado',  color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  ACTIVE:    { label: 'Ativo',     color: 'bg-green-500/20 text-green-400 border-green-500/30' },
-  EXPIRED:   { label: 'Expirado',  color: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
-  CANCELLED: { label: 'Cancelado', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
-};
+type Tab = 'dashboard' | 'catalog';
 
 export default function StoreDashboard() {
   const { storeId } = useParams<{ storeId: string }>();
   const storeName = localStorage.getItem('vc_store') ? JSON.parse(localStorage.getItem('vc_store')!).name : 'Minha Loja';
+  const [tab, setTab] = useState<Tab>('dashboard');
 
   const { data, isLoading, refetch, isFetching } = useQuery<StoreDashboardData>({
     queryKey: ['store-dashboard', storeId],
@@ -60,11 +57,13 @@ export default function StoreDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => refetch()} disabled={isFetching}
-              className="flex items-center gap-2 glass px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-sm transition-colors cursor-pointer disabled:opacity-50">
-              <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Atualizar
-            </button>
+            {tab === 'dashboard' && (
+              <button onClick={() => refetch()} disabled={isFetching}
+                className="flex items-center gap-2 glass px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-sm transition-colors cursor-pointer disabled:opacity-50">
+                <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            )}
             <button onClick={() => { localStorage.clear(); window.location.href = '/admin/login'; }}
               className="glass px-4 py-2.5 rounded-xl text-slate-400 hover:text-red-400 text-sm transition-colors cursor-pointer">
               Sair
@@ -72,116 +71,149 @@ export default function StoreDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatCard title="Vendas hoje" value={data?.stats.totalHoje ?? 0} icon={Users} color="blue" loading={isLoading} />
-          <StatCard title="Vendas este mês" value={data?.stats.totalMes ?? 0} icon={TrendingUp} color="purple" loading={isLoading} />
-          <StatCard
-            title="Receita total"
-            value={`R$ ${(data?.stats.receitaTotal ?? 0).toFixed(2).replace('.', ',')}`}
-            icon={DollarSign} color="green" loading={isLoading}
-          />
+        {/* Tabs */}
+        <div className="flex gap-1 bg-white/5 border border-white/10 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setTab('dashboard')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              tab === 'dashboard'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Dashboard
+          </button>
+          <button
+            onClick={() => setTab('catalog')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              tab === 'catalog'
+                ? 'bg-blue-600 text-white'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4" />
+            Catálogo Vai de Busca
+          </button>
         </div>
 
-        {/* Comissão destaque */}
-        <div className="glass rounded-2xl p-6">
-          <h3 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-4">Sua Comissão</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5">
-              <p className="text-slate-400 text-sm mb-1">Comissão este mês</p>
-              <p className="text-green-400 text-3xl font-extrabold">
-                R$ {(data?.stats.comissaoMes ?? 0).toFixed(2).replace('.', ',')}
-              </p>
-              <p className="text-slate-500 text-xs mt-1">
-                Sobre R$ {(data?.stats.receitaMes ?? 0).toFixed(2).replace('.', ',')} em vendas
-              </p>
+        {/* Tab Content */}
+        {tab === 'catalog' ? (
+          <AdminCatalog />
+        ) : (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <StatCard title="Vendas hoje" value={data?.stats.totalHoje ?? 0} icon={Users} color="blue" loading={isLoading} />
+              <StatCard title="Vendas este mês" value={data?.stats.totalMes ?? 0} icon={TrendingUp} color="purple" loading={isLoading} />
+              <StatCard
+                title="Receita total"
+                value={`R$ ${(data?.stats.receitaTotal ?? 0).toFixed(2).replace('.', ',')}`}
+                icon={DollarSign} color="green" loading={isLoading}
+              />
             </div>
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5">
-              <p className="text-slate-400 text-sm mb-1">Comissão total acumulada</p>
-              <p className="text-blue-400 text-3xl font-extrabold">
-                R$ {(data?.stats.comissaoTotal ?? 0).toFixed(2).replace('.', ',')}
-              </p>
-              <p className="text-slate-500 text-xs mt-1">
-                Taxa de {data?.store.commissionPct ?? '—'}% sobre cada venda
-              </p>
-            </div>
-          </div>
-        </div>
 
-        {/* APs vinculados */}
-        <div className="glass rounded-2xl p-5">
-          <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-            <Wifi className="w-4 h-4 text-blue-400" />
-            Access Points vinculados ({data?.accessPoints.length ?? 0})
-          </h3>
-          {data?.accessPoints.length === 0 ? (
-            <p className="text-slate-500 text-sm">Nenhum AP vinculado. Contate o administrador.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {data?.accessPoints.map((ap) => (
-                <div key={ap.id} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-                  <div className="w-2 h-2 rounded-full bg-green-400" />
-                  <span className="text-white text-sm">{ap.name}</span>
-                  {ap.apMac && <span className="text-slate-500 text-xs font-mono">{ap.apMac}</span>}
+            {/* Comissão destaque */}
+            <div className="glass rounded-2xl p-6">
+              <h3 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-4">Sua Comissão</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5">
+                  <p className="text-slate-400 text-sm mb-1">Comissão este mês</p>
+                  <p className="text-green-400 text-3xl font-extrabold">
+                    R$ {(data?.stats.comissaoMes ?? 0).toFixed(2).replace('.', ',')}
+                  </p>
+                  <p className="text-slate-500 text-xs mt-1">
+                    Sobre R$ {(data?.stats.receitaMes ?? 0).toFixed(2).replace('.', ',')} em vendas
+                  </p>
                 </div>
-              ))}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-5">
+                  <p className="text-slate-400 text-sm mb-1">Comissão total acumulada</p>
+                  <p className="text-blue-400 text-3xl font-extrabold">
+                    R$ {(data?.stats.comissaoTotal ?? 0).toFixed(2).replace('.', ',')}
+                  </p>
+                  <p className="text-slate-500 text-xs mt-1">
+                    Taxa de {data?.store.commissionPct ?? '—'}% sobre cada venda
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Últimas vendas */}
-        <div className="glass rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/10">
-            <h3 className="text-white font-semibold">Últimas vendas pelos seus APs</h3>
-          </div>
-          {isLoading ? (
-            <div className="p-5 space-y-3">{Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-12 bg-white/5 rounded-xl animate-pulse" />
-            ))}</div>
-          ) : !data?.pagamentosRecentes.length ? (
-            <div className="p-10 text-center text-slate-500">Nenhuma venda registrada pelos seus APs ainda.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Plano</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Valor</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Data</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {data?.pagamentosRecentes.map((p) => (
-                    <tr key={p.id} className="hover:bg-white/5">
-                      <td className="px-5 py-4">
-                        <p className="text-white text-sm">{p.email}</p>
-                        <p className="text-slate-500 text-xs font-mono">{p.macAddress}</p>
-                      </td>
-                      <td className="px-5 py-4 hidden sm:table-cell">
-                        <span className="text-slate-300 text-sm">{p.plan.name}</span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div>
-                          <p className="text-white text-sm font-semibold">R$ {p.plan.price.toFixed(2).replace('.', ',')}</p>
-                          <p className="text-green-400 text-xs">
-                            +R$ {(p.plan.price * ((data?.store.commissionPct ?? 0) / 100)).toFixed(2).replace('.', ',')} comissão
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 hidden md:table-cell">
-                        <span className="text-slate-400 text-xs flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(p.createdAt).toLocaleString('pt-BR')}
-                        </span>
-                      </td>
-                    </tr>
+            {/* APs vinculados */}
+            <div className="glass rounded-2xl p-5">
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <Wifi className="w-4 h-4 text-blue-400" />
+                Access Points vinculados ({data?.accessPoints.length ?? 0})
+              </h3>
+              {data?.accessPoints.length === 0 ? (
+                <p className="text-slate-500 text-sm">Nenhum AP vinculado. Contate o administrador.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {data?.accessPoints.map((ap) => (
+                    <div key={ap.id} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                      <div className="w-2 h-2 rounded-full bg-green-400" />
+                      <span className="text-white text-sm">{ap.name}</span>
+                      {ap.apMac && <span className="text-slate-500 text-xs font-mono">{ap.apMac}</span>}
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* Últimas vendas */}
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-white/10">
+                <h3 className="text-white font-semibold">Últimas vendas pelos seus APs</h3>
+              </div>
+              {isLoading ? (
+                <div className="p-5 space-y-3">{Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-white/5 rounded-xl animate-pulse" />
+                ))}</div>
+              ) : !data?.pagamentosRecentes.length ? (
+                <div className="p-10 text-center text-slate-500">Nenhuma venda registrada pelos seus APs ainda.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Cliente</th>
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Plano</th>
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Valor</th>
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {data?.pagamentosRecentes.map((p) => (
+                        <tr key={p.id} className="hover:bg-white/5">
+                          <td className="px-5 py-4">
+                            <p className="text-white text-sm">{p.email}</p>
+                            <p className="text-slate-500 text-xs font-mono">{p.macAddress}</p>
+                          </td>
+                          <td className="px-5 py-4 hidden sm:table-cell">
+                            <span className="text-slate-300 text-sm">{p.plan.name}</span>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div>
+                              <p className="text-white text-sm font-semibold">R$ {p.plan.price.toFixed(2).replace('.', ',')}</p>
+                              <p className="text-green-400 text-xs">
+                                +R$ {(p.plan.price * ((data?.store.commissionPct ?? 0) / 100)).toFixed(2).replace('.', ',')} comissão
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 hidden md:table-cell">
+                            <span className="text-slate-400 text-xs flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(p.createdAt).toLocaleString('pt-BR')}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
