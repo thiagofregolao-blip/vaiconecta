@@ -10,19 +10,32 @@ export const adminApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-adminApi.interceptors.request.use((config) => {
+export const lojistaApi = axios.create({
+  baseURL: '/api/lojista',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+export const publicApi = axios.create({
+  baseURL: '/api/public',
+  headers: { 'Content-Type': 'application/json' },
+});
+
+function attachToken(config: any) {
   const token = localStorage.getItem('vc_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
-});
+}
 
-adminApi.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('vc_token');
-      window.location.href = '/admin/login';
-    }
-    return Promise.reject(err);
+function handle401(err: any) {
+  if (err.response?.status === 401) {
+    localStorage.removeItem('vc_token');
+    window.location.href = '/admin/login';
   }
-);
+  return Promise.reject(err);
+}
+
+adminApi.interceptors.request.use(attachToken);
+adminApi.interceptors.response.use((r) => r, handle401);
+
+lojistaApi.interceptors.request.use(attachToken);
+lojistaApi.interceptors.response.use((r) => r, handle401);

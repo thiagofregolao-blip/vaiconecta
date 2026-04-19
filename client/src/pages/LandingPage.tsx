@@ -9,6 +9,7 @@ import { api } from '../api';
 import PixModal from '../components/PixModal';
 import VoucherModal from '../components/VoucherModal';
 import SearchModal from '../components/SearchModal';
+import StoreShowcase from '../components/public/StoreShowcase';
 
 interface Plan { id: string; name: string; price: number; hours: number; maxDevices: number }
 type ModalType = 'como-funciona' | 'sobre' | 'contato' | null;
@@ -89,7 +90,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden bg-[#0a1628] text-white">
+    <div className="min-h-dvh flex flex-col bg-[#0a1628] text-white">
 
       {/* ── 1. BARRA TOPO ── */}
       <div className="shrink-0 bg-gradient-to-r from-orange-500 to-red-500 py-1.5 text-center text-xs sm:text-sm font-semibold tracking-wide">
@@ -271,6 +272,9 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      {/* ── VITRINE DE LOJAS ── */}
+      <StoreShowcase />
 
       {/* ── MODAIS ── */}
       {activeModal && <InfoModal type={activeModal} onClose={() => setActiveModal(null)} />}

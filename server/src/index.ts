@@ -4,12 +4,14 @@ import cors from 'cors';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { adminAuth } from './middleware/adminAuth';
+import { lojistaAuth } from './middleware/lojistaAuth';
 import prisma from './lib/prisma';
 
 import webhookRouter from './routes/webhook';
 import plansRouter from './routes/plans';
 import paymentsRouter from './routes/payments';
 import searchRouter from './routes/search';
+import publicRouter from './routes/public';
 
 import authAdminRouter from './routes/admin/auth';
 import adminPlansRouter from './routes/admin/plans';
@@ -19,6 +21,10 @@ import storesRouter from './routes/admin/stores';
 import usersRouter from './routes/admin/users';
 import bannersRouter from './routes/admin/banners';
 import catalogAdminRouter from './routes/admin/catalog';
+
+import lojistaProductsRouter from './routes/lojista/products';
+import lojistaStoreRouter from './routes/lojista/store';
+import lojistaImportRouter from './routes/lojista/import';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,12 +43,16 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOS
 
 app.use('/webhook/mercadopago', webhookRouter);
 
+// Públicas
 app.use('/api/plans', plansRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/public', publicRouter);
 
+// Admin auth
 app.use('/api/admin', authAdminRouter);
 
+// Super admin / Admin geral
 app.use('/api/admin/plans', adminAuth, adminPlansRouter);
 app.use('/api/admin/sessions', adminAuth, sessionsRouter);
 app.use('/api/admin/vouchers', adminAuth, vouchersRouter);
@@ -50,6 +60,11 @@ app.use('/api/admin/stores', adminAuth, storesRouter);
 app.use('/api/admin/users', adminAuth, usersRouter);
 app.use('/api/admin/banners', adminAuth, bannersRouter);
 app.use('/api/admin/catalog', adminAuth, catalogAdminRouter);
+
+// Painel do lojista
+app.use('/api/lojista/products', lojistaAuth, lojistaProductsRouter);
+app.use('/api/lojista/store', lojistaAuth, lojistaStoreRouter);
+app.use('/api/lojista/import', lojistaAuth, lojistaImportRouter);
 
 // Banners ativos para a landing page (público)
 app.get('/api/banners', async (_req, res) => {

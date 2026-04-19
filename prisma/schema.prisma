@@ -20,6 +20,20 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum Currency {
+  BRL
+  USD
+  PYG
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  SUSPENDED
+}
+
 model Admin {
   id        String    @id @default(cuid())
   username  String    @unique
@@ -35,10 +49,39 @@ model Admin {
 model Store {
   id            String        @id @default(cuid())
   name          String
+  slug          String        @unique
   commissionPct Float         @default(10)
+
+  // Branding
+  logoUrl         String?
+  bannerUrl       String?
+  themeColor      String?   @default("#f97316")
+  bannerGradient  String?   @default("from-rose-500 via-orange-500 to-amber-500")
+  descricao       String?
+
+  // Contato
+  whatsapp        String?
+  instagram       String?
+  email           String?
+  endereco        String?
+  cidade          String?
+
+  // Status / Plano
+  isActive              Boolean            @default(true)
+  isPremium             Boolean            @default(false)
+  subscriptionStatus    SubscriptionStatus @default(TRIAL)
+  subscriptionExpiresAt DateTime?
+
   admins        Admin[]
   accessPoints  AccessPoint[]
+  products      CatalogProduct[]
+  importConfig  StoreImportConfig?
+
   createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([slug])
+  @@index([isActive, isPremium])
 }
 
 model AccessPoint {
@@ -107,16 +150,81 @@ model Voucher {
 }
 
 model CatalogProduct {
-  id          String   @id @default(cuid())
-  nome        String
-  precoGs     Float?
-  precoUsd    Float?
-  precoBrl    Float?
-  imagemUrl   String
-  produtoUrl  String
-  loja        String   @default("LG Importados")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String    @id @default(cuid())
+  nome           String
+  descricao      String?
+  categoria      String?
+  marca          String?
 
+  // Preços — lojista digita UM (na moeda que quiser); os outros são calculados
+  moedaOriginal  Currency  @default(BRL)
+  precoOriginal  Float
+  precoGs        Float?
+  precoUsd       Float?
+  precoBrl       Float?
+
+  imagemUrl      String
+  produtoUrl     String?
+
+  // Vínculo com loja
+  storeId        String
+  store          Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Flags
+  ativo          Boolean   @default(true)
+  destaque       Boolean   @default(false)
+  ordem          Int       @default(0)
+  estoque        Int?
+
+  // Origem da importação (para rastrear atualizações via API externa)
+  externalId     String?
+  sourceType     String?   @default("manual") // manual | excel | api
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([storeId, ativo])
   @@index([nome])
+  @@index([categoria])
+  @@unique([storeId, externalId])
+}
+
+// Cache de cotação de moedas (atualizado a cada 1h)
+model ExchangeRate {
+  id        String   @id @default(cuid())
+  de        Currency
+  para      Currency
+  taxa      Float
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([de, para])
+}
+
+// Configuração de importação via API externa do site do lojista
+model StoreImportConfig {
+  id              String    @id @default(cuid())
+  storeId         String    @unique
+  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  apiUrl          String
+  apiMethod       String    @default("GET") // GET | POST
+  apiHeaders      Json?     // headers custom (ex: {"Authorization": "Bearer xxx"})
+
+  // Mapeamento de campos: nosso_campo -> campo_do_cliente
+  // Ex: { "nome": "title", "preco": "price", "imagem": "image_url" }
+  fieldMapping    Json
+
+  // Caminho raiz do array no JSON da API (ex: "data.products" ou "items")
+  rootPath        String?
+
+  // Auto-sync
+  autoSyncEnabled Boolean   @default(false)
+  syncIntervalHours Int     @default(24)
+  lastSyncAt      DateTime?
+  lastSyncStatus  String?   // success | error
+  lastSyncError   String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

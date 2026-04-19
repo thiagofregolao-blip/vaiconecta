@@ -32,7 +32,7 @@ export default function AdminLogin() {
     localStorage.setItem('vc_name', data.name || data.username);
     if (data.role === 'STORE_ADMIN') {
       if (data.store) {
-        navigate(`/admin/store/${data.store.id}`);
+        navigate('/lojista');
       } else {
         localStorage.clear();
         throw new Error('Usuário sem loja vinculada. Contate o administrador.');

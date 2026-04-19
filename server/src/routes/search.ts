@@ -15,10 +15,13 @@ router.get('/catalog', async (req: Request, res: Response) => {
   const words = q.split(/\s+/).filter(w => w.length > 1);
   const products = await prisma.catalogProduct.findMany({
     where: {
+      ativo: true,
+      store: { isActive: true },
       OR: words.map(w => ({
         nome: { contains: w, mode: 'insensitive' as const },
       })),
     },
+    include: { store: { select: { name: true, slug: true } } },
     take: limit,
     orderBy: { createdAt: 'desc' },
   });
@@ -26,11 +29,13 @@ router.get('/catalog', async (req: Request, res: Response) => {
   // Mapeia para snake_case que o SearchModal espera
   res.json({
     products: products.map(p => ({
+      id: p.id,
       nome: p.nome,
       imagem_url: p.imagemUrl,
       produto_url: p.produtoUrl,
       preco_numerico: p.precoBrl ?? p.precoUsd ?? 0,
-      loja: p.loja,
+      loja: p.store.name,
+      loja_slug: p.store.slug,
     })),
   });
 });

@@ -12,6 +12,18 @@ import AdminBanners from './pages/admin/Banners';
 import StoreDashboard from './pages/admin/StoreDashboard';
 import AdminLayout from './components/admin/Layout';
 
+// Painel do lojista
+import LojistaLayout from './components/lojista/Layout';
+import LojistaOverview from './pages/lojista/Overview';
+import LojistaProducts from './pages/lojista/Products';
+import LojistaImport from './pages/lojista/Import';
+import LojistaBranding from './pages/lojista/Branding';
+import LojistaSubscription from './pages/lojista/Subscription';
+
+// Vitrine pública
+import StorePage from './pages/public/StorePage';
+import ProductPage from './pages/public/ProductPage';
+
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('vc_token');
   if (!token) return <Navigate to="/admin/login" replace />;
@@ -26,18 +38,45 @@ function RequireSuperAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireLojista({ children }: { children: React.ReactNode }) {
+  const token = localStorage.getItem('vc_token');
+  const role = localStorage.getItem('vc_role');
+  if (!token) return <Navigate to="/admin/login" replace />;
+  // Super admin também pode entrar no painel de lojista (via x-as-store)
+  if (role !== 'STORE_ADMIN' && role !== 'SUPER_ADMIN') return <Navigate to="/admin/login" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Home híbrida (Wi-Fi + vitrine de lojas) */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/portal" element={<LandingPage />} />
+
+        {/* Vitrine pública das lojas */}
+        <Route path="/loja/:slug" element={<StorePage />} />
+        <Route path="/loja/:slug/produto/:id" element={<ProductPage />} />
+
+        {/* Auth */}
         <Route path="/admin/login" element={<AdminLogin />} />
 
-        {/* Painel do lojista (standalone) */}
+        {/* Legado: acesso direto ao dashboard da loja antigo */}
         <Route path="/admin/store/:storeId" element={
           <RequireAuth><StoreDashboard /></RequireAuth>
         } />
+
+        {/* Painel do Lojista (novo) */}
+        <Route path="/lojista" element={
+          <RequireLojista><LojistaLayout /></RequireLojista>
+        }>
+          <Route index element={<LojistaOverview />} />
+          <Route path="produtos" element={<LojistaProducts />} />
+          <Route path="importar" element={<LojistaImport />} />
+          <Route path="branding" element={<LojistaBranding />} />
+          <Route path="assinatura" element={<LojistaSubscription />} />
+        </Route>
 
         {/* Super admin */}
         <Route path="/admin" element={
