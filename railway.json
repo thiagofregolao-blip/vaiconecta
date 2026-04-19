@@ -5,8 +5,9 @@
     "buildCommand": "cd server && npm install && npx prisma generate && npm run build && cd ../client && npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "cd server && npx prisma db push --accept-data-loss && npm start",
+    "startCommand": "cd server && npm run prep-db:prod && npx prisma db push --accept-data-loss && npm run seed:prod && npm start",
     "healthcheckPath": "/health",
+    "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE"
   }
 }

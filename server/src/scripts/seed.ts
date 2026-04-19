@@ -1,9 +1,15 @@
+/**
+ * Seed idempotente — criado pra rodar em todo deploy (prep-db + db push + seed + start).
+ * Usa upsert em tudo, então pode ser executado N vezes sem duplicar.
+ */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  console.log('🌱 seed: garantindo dados iniciais...');
+
   const adminPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
 
   // Super admin
@@ -12,6 +18,7 @@ async function main() {
     update: { role: 'SUPER_ADMIN' },
     create: { username: 'admin', password: adminPassword, role: 'SUPER_ADMIN' },
   });
+  console.log('  ✓ super admin');
 
   // Planos Wi-Fi padrão
   await prisma.plan.createMany({
@@ -22,6 +29,7 @@ async function main() {
       { name: '7 Dias', price: 35.0, hours: 168, maxDevices: 3 },
     ],
   });
+  console.log('  ✓ planos Wi-Fi');
 
   // Loja inicial: LG Importados
   const lgStore = await prisma.store.upsert({
@@ -39,9 +47,10 @@ async function main() {
       subscriptionStatus: 'ACTIVE',
     },
   });
+  console.log('  ✓ Store LG Importados');
 
   // Admin da loja LG
-  const storeAdminPassword = await bcrypt.hash('lg123', 10);
+  const storeAdminPassword = await bcrypt.hash(process.env.LG_ADMIN_PASSWORD || 'lg123', 10);
   await prisma.admin.upsert({
     where: { username: 'lg-importados' },
     update: { storeId: lgStore.id, role: 'STORE_ADMIN' },
@@ -53,12 +62,16 @@ async function main() {
       storeId: lgStore.id,
     },
   });
+  console.log('  ✓ admin da loja LG');
 
-  console.log('✓ Seed concluído');
+  console.log('✓ seed concluído');
   console.log('  Super admin: admin / admin123');
   console.log('  Loja LG:     lg-importados / lg123');
 }
 
 main()
-  .catch(console.error)
+  .catch((err) => {
+    console.error('✗ seed falhou:', err?.message || err);
+    process.exitCode = 1;
+  })
   .finally(() => prisma.$disconnect());
